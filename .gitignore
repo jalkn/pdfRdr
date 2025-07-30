@@ -1,0 +1,9 @@
+*.pyc
+__pycache__
+.venv
+.env
+.vscode
+.DS_store
+PDFS/
+Resultados/
+cards.py
