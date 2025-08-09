@@ -49,13 +49,6 @@ pdf_password = ""
 # Create output base folder if it doesn't exist
 os.makedirs(output_base_folder, exist_ok=True)
 
-# Create specific output subfolders (still useful for organizational purposes if you later decide to separate)
-mc_output_folder = os.path.join(output_base_folder, "MC_Resultados")
-visa_output_folder = os.path.join(output_base_folder, "Visa_Resultados")
-os.makedirs(mc_output_folder, exist_ok=True) # Keep these for now, output will go to output_base_folder directly
-os.makedirs(visa_output_folder, exist_ok=True) # Keep these for now, output will go to output_base_folder directly
-
-
 # --- TRM Data Loading ---
 trm_df = pd.DataFrame() # Initialize an empty DataFrame
 trm_loaded = False
