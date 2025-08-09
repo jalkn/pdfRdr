@@ -8,12 +8,12 @@ function TC {
     Write-Host "🚀 Creating TC framework" -ForegroundColor $YELLOW
 
     # Create Python virtual environment
-    python -m venv .venv
+    python3 -m venv .venv
     .\.venv\scripts\activate
 
     # Install required Python packages
-    python.exe -m pip install --upgrade pip
-    python -m pip install PyMuPDF pandas pdfplumber openpyxl
+    python3 -m pip install --upgrade pip
+    python3 -m pip install PyMuPDF pandas pdfplumber openpyxl
 
     # Create templates directory structure
     $directories = @(
@@ -49,11 +49,11 @@ pdf_password = ""
 # Create output base folder if it doesn't exist
 os.makedirs(output_base_folder, exist_ok=True)
 
-# Create specific output subfolders
+# Create specific output subfolders (still useful for organizational purposes if you later decide to separate)
 mc_output_folder = os.path.join(output_base_folder, "MC_Resultados")
 visa_output_folder = os.path.join(output_base_folder, "Visa_Resultados")
-os.makedirs(mc_output_folder, exist_ok=True)
-os.makedirs(visa_output_folder, exist_ok=True)
+os.makedirs(mc_output_folder, exist_ok=True) # Keep these for now, output will go to output_base_folder directly
+os.makedirs(visa_output_folder, exist_ok=True) # Keep these for now, output will go to output_base_folder directly
 
 
 # --- TRM Data Loading ---
@@ -147,8 +147,7 @@ visa_pattern_transaccion = re.compile(
 visa_pattern_tarjeta = re.compile(r"TARJETA:\s+\*{12}(\d{4})")
 
 
-resultados_mc = []
-resultados_visa = []
+all_resultados = [] # Combined list for all results
 
 # --- Process MC PDFs ---
 mc_input_folder = os.path.join(input_base_folder, "MC")
@@ -197,8 +196,9 @@ if os.path.exists(mc_input_folder):
 
                             tipo_cambio = obtener_trm(pd.to_datetime(fecha_transaccion)) if moneda_actual == "USD" else ""
                             
-                            resultados_mc.append({
+                            all_resultados.append({
                                 "Archivo": archivo,
+                                "Tipo de Tarjeta": "Mastercard", # New column
                                 "Tarjetahabiente": nombre, # Keep raw name here, convert to title case later for merge
                                 "Número de Tarjeta": ultimos_digitos,
                                 "Moneda": moneda_actual,
@@ -217,8 +217,9 @@ if os.path.exists(mc_input_folder):
                             tiene_transacciones_mc = True
                     
                     if not tiene_transacciones_mc and (nombre or ultimos_digitos): # Only add if we found a cardholder/card
-                        resultados_mc.append({
+                        all_resultados.append({
                             "Archivo": archivo,
+                            "Tipo de Tarjeta": "Mastercard", # New column
                             "Tarjetahabiente": nombre, # Keep raw name here, convert to title case later for merge
                             "Número de Tarjeta": ultimos_digitos,
                             "Moneda": "",
@@ -271,8 +272,9 @@ if os.path.exists(visa_input_folder):
                             if tarjeta_match_visa:
                                 # Before updating card, if the previous card had no transactions, add a row
                                 if tarjetahabiente_visa and tarjeta_visa and not tiene_transacciones_visa:
-                                    resultados_visa.append({
+                                    all_resultados.append({
                                         "Archivo": pdf_file,
+                                        "Tipo de Tarjeta": "Visa", # New column
                                         "Tarjetahabiente": tarjetahabiente_visa,
                                         "Número de Tarjeta": tarjeta_visa,
                                         "Moneda": "",
@@ -316,8 +318,9 @@ if os.path.exists(visa_input_folder):
                                 cargo_formatted = cargo.replace(".", "").replace(",", ".")
                                 saldo_formatted = saldo.replace(".", "").replace(",", ".")
 
-                                resultados_visa.append({
+                                all_resultados.append({
                                     "Archivo": pdf_file,
+                                    "Tipo de Tarjeta": "Visa", # New column
                                     "Tarjetahabiente": tarjetahabiente_visa, # Keep raw name here, convert to title case later for merge
                                     "Número de Tarjeta": tarjeta_visa,
                                     "Moneda": "COP", # Assuming Visa are in COP as no currency explicit extraction
@@ -337,8 +340,9 @@ if os.path.exists(visa_input_folder):
                     
                     # After processing all pages for a Visa PDF, check if no transactions were found for the last card processed
                     if tarjetahabiente_visa and tarjeta_visa and not tiene_transacciones_visa:
-                        resultados_visa.append({
+                        all_resultados.append({
                             "Archivo": pdf_file,
+                            "Tipo de Tarjeta": "Visa", # New column
                             "Tarjetahabiente": tarjetahabiente_visa, # Keep raw name here, convert to title case later for merge
                             "Número de Tarjeta": tarjeta_visa,
                             "Moneda": "",
@@ -360,83 +364,87 @@ if os.path.exists(visa_input_folder):
 else:
     print(f"⏩ Carpeta Visa no encontrada en '{input_base_folder}'. Saltando procesamiento de Visa.")
 
-# --- Save MC Results ---
-if resultados_mc:
-    df_resultado_mc = pd.DataFrame(resultados_mc)
+# --- Save All Results to a Single Excel File ---
+if all_resultados:
+    df_resultado_final = pd.DataFrame(all_resultados)
     
     # Convert 'Tarjetahabiente' to Title Case for merging with cedulas_df
-    df_resultado_mc['Tarjetahabiente'] = df_resultado_mc['Tarjetahabiente'].astype(str).str.title().str.strip()
+    df_resultado_final['Tarjetahabiente'] = df_resultado_final['Tarjetahabiente'].astype(str).str.title().str.strip()
 
-    # Merge with categorias_df if loaded
-    if categorias_loaded:
-        print("Merging MC results with categorias.xlsx...")
-        df_resultado_mc = pd.merge(df_resultado_mc, categorias_df[['Descripción', 'Categoría', 'Subcategoría', 'Zona']],
-                                   on='Descripción', how='left')
-    else:
-        # Add empty columns if categorias.xlsx was not loaded
-        df_resultado_mc['Categoría'] = ''
-        df_resultado_mc['Subcategoría'] = ''
-        df_resultado_mc['Zona'] = ''
-
-    # Merge with cedulas_df if loaded
-    if cedulas_loaded:
-        print("Merging MC results with cedulas.xlsx...")
-        df_resultado_mc = pd.merge(df_resultado_mc, cedulas_df[['Tarjetahabiente', 'Cédula', 'Tipo', 'Cargo']],
-                                   on='Tarjetahabiente', how='left')
-    else:
-        # Add empty columns if cedulas.xlsx was not loaded
-        df_resultado_mc['Cédula'] = ''
-        df_resultado_mc['Tipo'] = ''
-        df_resultado_mc['Cargo'] = ''
-
-    fecha_hora_salida = datetime.now().strftime("%Y%m%d_%H%M")
-    archivo_salida_mc = f"MC_{fecha_hora_salida}.xlsx"
-    ruta_salida_mc = os.path.join(mc_output_folder, archivo_salida_mc)
-    df_resultado_mc.to_excel(ruta_salida_mc, index=False)
-    print(f"\n✅ Archivo MC generado correctamente en:\n{ruta_salida_mc}")
-    print("\nPrimeras 5 filas del resultado MC:")
-    print(df_resultado_mc.head())
-else:
-    print("\n⚠️ No se extrajo ningún dato de los archivos MC.")
-
-# --- Save Visa Results ---
-if resultados_visa:
-    df_resultado_visa = pd.DataFrame(resultados_visa)
-
-    # Convert 'Tarjetahabiente' to Title Case for merging with cedulas_df
-    df_resultado_visa['Tarjetahabiente'] = df_resultado_visa['Tarjetahabiente'].astype(str).str.title().str.strip()
+    # Convert 'Fecha de Transacción' to datetime objects to enable day name extraction
+    df_resultado_final['Fecha de Transacción'] = pd.to_datetime(df_resultado_final['Fecha de Transacción'], errors='coerce')
+    
+    # Add the 'Día' column
+    # Ensure it handles NaT values gracefully, perhaps by filling with empty string
+    df_resultado_final['Día'] = df_resultado_final['Fecha de Transacción'].dt.day_name(locale='es_ES').fillna('') # Use 'es_ES' for Spanish day names
     
     # Merge with categorias_df if loaded
     if categorias_loaded:
-        print("Merging Visa results with categorias.xlsx...")
-        df_resultado_visa = pd.merge(df_resultado_visa, categorias_df[['Descripción', 'Categoría', 'Subcategoría', 'Zona']],
+        print("Merging all results with categorias.xlsx...")
+        df_resultado_final = pd.merge(df_resultado_final, categorias_df[['Descripción', 'Categoría', 'Subcategoría', 'Zona']],
                                    on='Descripción', how='left')
     else:
         # Add empty columns if categorias.xlsx was not loaded
-        df_resultado_visa['Categoría'] = ''
-        df_resultado_visa['Subcategoría'] = ''
-        df_resultado_visa['Zona'] = ''
+        df_resultado_final['Categoría'] = ''
+        df_resultado_final['Subcategoría'] = ''
+        df_resultado_final['Zona'] = ''
 
     # Merge with cedulas_df if loaded
     if cedulas_loaded:
-        print("Merging Visa results with cedulas.xlsx...")
-        df_resultado_visa = pd.merge(df_resultado_visa, cedulas_df[['Tarjetahabiente', 'Cédula', 'Tipo', 'Cargo']],
+        print("Merging all results with cedulas.xlsx...")
+        df_resultado_final = pd.merge(df_resultado_final, cedulas_df[['Tarjetahabiente', 'Cédula', 'Tipo', 'Cargo']],
                                    on='Tarjetahabiente', how='left')
     else:
         # Add empty columns if cedulas.xlsx was not loaded
-        df_resultado_visa['Cédula'] = ''
-        df_resultado_visa['Tipo'] = ''
-        df_resultado_visa['Cargo'] = ''
+        df_resultado_final['Cédula'] = ''
+        df_resultado_final['Tipo'] = ''
+        df_resultado_final['Cargo'] = ''
+
+    # Define the desired column order, placing 'Día' after 'Fecha de Transacción'
+    # Ensure all original columns are included, and new merged columns are also added.
+    # We can dynamically get the current columns and reorder.
+    
+    # Get the base columns that are always present or added by extraction
+    base_columns = [
+        "Archivo",
+        "Tipo de Tarjeta",
+        "Tarjetahabiente",
+        "Número de Tarjeta",
+        "Moneda",
+        "Tipo de Cambio",
+        "Número de Autorización",
+        "Fecha de Transacción",
+        "Día", # The new column
+        "Descripción",
+        "Valor Original",
+        "Tasa Pactada",
+        "Tasa EA Facturada",
+        "Cargos y Abonos",
+        "Saldo a Diferir",
+        "Cuotas",
+        "Página"
+    ]
+
+    # Add columns from merges if they exist in the final DataFrame
+    if 'Categoría' in df_resultado_final.columns:
+        base_columns.extend(['Categoría', 'Subcategoría', 'Zona'])
+    if 'Cédula' in df_resultado_final.columns:
+        base_columns.extend(['Cédula', 'Tipo', 'Cargo'])
+
+    # Filter to only include columns that actually exist in the DataFrame to avoid errors
+    final_columns_order = [col for col in base_columns if col in df_resultado_final.columns]
+    df_resultado_final = df_resultado_final[final_columns_order]
+
 
     fecha_hora_salida = datetime.now().strftime("%Y%m%d_%H%M")
-    archivo_salida_visa = f"VISA_{fecha_hora_salida}.xlsx"
-    ruta_salida_visa = os.path.join(visa_output_folder, archivo_salida_visa)
-    df_resultado_visa.to_excel(ruta_salida_visa, index=False)
-    print(f"\n✅ Archivo VISA generado correctamente en:\n{ruta_salida_visa}")
-    print("\nPrimeras 5 filas del resultado VISA:")
-    print(df_resultado_visa.head())
+    archivo_salida_unificado = f"Extracto_Tarjetas_Unificado_{fecha_hora_salida}.xlsx"
+    ruta_salida_unificado = os.path.join(output_base_folder, archivo_salida_unificado)
+    df_resultado_final.to_excel(ruta_salida_unificado, index=False)
+    print(f"\n✅ Archivo unificado de extractos generado correctamente en:\n{ruta_salida_unificado}")
+    print("\nPrimeras 5 filas del resultado unificado:")
+    print(df_resultado_final.head())
 else:
-    print("\n⚠️ No se extrajo ningún dato de los archivos VISA.")
+    print("\n⚠️ No se extrajo ningún dato de los archivos PDF (MC o VISA).")
 "@
 }
 
