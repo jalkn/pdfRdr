@@ -437,7 +437,7 @@ if all_resultados:
 
 
     fecha_hora_salida = datetime.now().strftime("%Y%m%d_%H%M")
-    archivo_salida_unificado = f"Extracto_Tarjetas_Unificado_{fecha_hora_salida}.xlsx"
+    archivo_salida_unificado = f"TC_{fecha_hora_salida}.xlsx"
     ruta_salida_unificado = os.path.join(output_base_folder, archivo_salida_unificado)
     df_resultado_final.to_excel(ruta_salida_unificado, index=False)
     print(f"\n✅ Archivo unificado de extractos generado correctamente en:\n{ruta_salida_unificado}")
