@@ -4,6 +4,8 @@ __pycache__
 .env
 .vscode
 .DS_store
-PDFS/
+src/
 Resultados/
 cards.py
+cards.txt
+clara.py
