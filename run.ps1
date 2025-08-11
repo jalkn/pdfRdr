@@ -17,7 +17,7 @@ function TC {
 
     # Create templates directory structure
     $directories = @(
-        "PDFS",
+        "src",
         "Resultados"
     )
     foreach ($dir in $directories) {

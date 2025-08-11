@@ -25,25 +25,20 @@ After the Analysis, the `Resultados/` folder will also contain the analysis resu
 
 ```
 TC/
-├── PDFS/
-│   ├── MC/
-│   │   ├── 24.MCGAenero2025.pdf
-│   │   ├── 25.MCGAfebrero2025.pdf
-│   │   ├── 26.MCGAmarzo2025.pdf
-│   │   └── 27.MCGAabril2025.pdf
-│   ├── Visa/
-│   │   ├── 34.VisaGAenero2025.pdf
-│   │   ├── 35.VisaGAfebrero2025.pdf
-│   │   ├── 36.VisaGAmarzo2025.pdf
-│   │   └── 37.VisaGAabril2025.pdf
+├── src/
+│   ├── 24.MCGAenero2025.pdf
+│   ├── 25.MCGAfebrero2025.pdf
+│   ├── 26.MCGAmarzo2025.pdf
+│   ├── 27.MCGAabril2025.pdf
+│   ├── 34.VisaGAenero2025.pdf
+│   ├── 35.VisaGAfebrero2025.pdf
+│   ├── 36.VisaGAmarzo2025.pdf
+│   ├── 37.VisaGAabril2025.pdf
 │   ├── categorias.xlsx
 │   ├── cedulas.xlsx
 │   └── TRM.xlsx
 ├── Resulatdos/
-│   ├── MC_Resultados/
-│   │   └── MC_20250730_0813.xlsx
-│   └── Visa_Resultados/
-│       └── Visa_20250730_0813.xlsx
+│       └── TC_20250730_0813.xlsx
 ├── cards.py
 ├── .gitignore
 ├── README.md
