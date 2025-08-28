@@ -8,12 +8,12 @@ function TC {
     Write-Host "🚀 Creating TC framework" -ForegroundColor $YELLOW
 
     # Create Python virtual environment
-    python -m venv .venv
+    python3 -m venv .venv
     .\.venv\scripts\activate
 
     # Install required Python packages
-    python -m pip install --upgrade pip
-    python -m pip install PyMuPDF pandas pdfplumber openpyxl
+    python3 -m pip install --upgrade pip
+    python3 -m pip install PyMuPDF pandas pdfplumber openpyxl
 
     # Create templates directory structure
     $directories = @(
